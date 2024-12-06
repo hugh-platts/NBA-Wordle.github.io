@@ -6,11 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let hintsUsed = 0;
     let currentMode = 'all';
 
+    // Retrieve game statistics from localStorage
     let gamesPlayed = parseInt(localStorage.getItem('gamesPlayed'), 10) || 0;
     let gamesWon = parseInt(localStorage.getItem('gamesWon'), 10) || 0;
 
     updateScoreboard();
 
+    // Mappings for abbreviations
     const conferenceMapping = {
         "Eastern Conference": "East",
         "Western Conference": "West"
@@ -33,23 +35,36 @@ document.addEventListener('DOMContentLoaded', () => {
         "C": ["PF"]
     };
 
+    // Arrays to store sorted players for hints
     let sortedByHeightAsc = [];
     let sortedByHeightDesc = [];
     let sortedByAgeAsc = [];
     let sortedByAgeDesc = [];
 
+    // Object to count players per country
     let countryCounts = {};
 
+    /**
+     * Normalize strings for comparison (e.g., user input)
+     * Removes accents, converts to lowercase, trims spaces, etc.
+     * @param {string} str 
+     * @returns {string}
+     */
     function normalizeString(str) {
         return str
             .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
             .toLowerCase()
-            .replace(/\b(sr|jr|iii|ii|iv|v)\b/g, '')
-            .replace(/\./g, '')
+            .replace(/\b(sr|jr|iii|ii|iv|v)\b/g, '') // Remove suffixes
+            .replace(/\./g, '') // Remove periods
             .trim();
     }
 
+    /**
+     * Format the years of experience for display
+     * @param {string|number} years 
+     * @returns {string}
+     */
     function formatYearsExperience(years) {
         if (years === "R") return "Rookie";
         const num = parseInt(years, 10);
@@ -59,11 +74,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return "N/A";
     }
 
+    /**
+     * Get the URL for the country's flag using FlagCDN
+     * @param {string} countryCode 
+     * @returns {string}
+     */
     function getFlagURL(countryCode) {
         // Using FlagCDN for flag images. Ensure countryCode is lowercase.
         return `https://flagcdn.com/w20/${countryCode.toLowerCase()}.png`;
     }
 
+    /**
+     * Get the full country name from the country code
+     * @param {string} countryCode 
+     * @returns {string}
+     */
     function getCountryName(countryCode) {
         // Expanded mapping for more countries
         const countryMapping = {
@@ -91,8 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return countryMapping[countryCode] || countryCode.toUpperCase();
     }
 
+    /**
+     * Fetch players data from players.json
+     */
     fetch('players.json')
-        .then(r => r.json())
+        .then(response => response.json())
         .then(data => {
             // Count players per country
             countryCounts = data.reduce((acc, player) => {
@@ -101,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return acc;
             }, {});
 
+            // Map players and add additional fields
             players = data.map(player => ({
                 ...player,
                 numeric_salary: parseSalary(player.salary),
@@ -118,18 +147,24 @@ document.addEventListener('DOMContentLoaded', () => {
             setupModeSelection();
             startGame();
         })
-        .catch(e => console.error('Error loading players.json:', e));
+        .catch(error => console.error('Error loading players.json:', error));
 
+    /**
+     * Populate the datalist for player name suggestions
+     */
     function populateDatalist() {
         const datalist = document.getElementById('player-names');
         datalist.innerHTML = '';
         players.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.player;
-            datalist.appendChild(opt);
+            const option = document.createElement('option');
+            option.value = p.player;
+            datalist.appendChild(option);
         });
     }
 
+    /**
+     * Setup mode selection event listener
+     */
     function setupModeSelection() {
         const modeSelect = document.getElementById('game-mode');
         modeSelect.addEventListener('change', function() {
@@ -139,6 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
         filterPlayersByMode();
     }
 
+    /**
+     * Filter players based on the selected mode
+     */
     function filterPlayersByMode() {
         switch (currentMode) {
             case 'easy':
@@ -157,16 +195,22 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDatalist();
     }
 
+    /**
+     * Update the datalist after filtering
+     */
     function updateDatalist() {
         const datalist = document.getElementById('player-names');
         datalist.innerHTML = '';
         filteredPlayers.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.player;
-            datalist.appendChild(opt);
+            const option = document.createElement('option');
+            option.value = p.player;
+            datalist.appendChild(option);
         });
     }
 
+    /**
+     * Start or restart the game
+     */
     function startGame() {
         filterPlayersByMode();
         if (filteredPlayers.length === 0) {
@@ -178,18 +222,27 @@ document.addEventListener('DOMContentLoaded', () => {
         enableInputs();
     }
 
+    /**
+     * Enable input fields and buttons
+     */
     function enableInputs() {
         document.getElementById('player-guess').disabled = false;
         document.getElementById('submit-guess').disabled = false;
         document.getElementById('hint-button').disabled = false;
     }
 
+    /**
+     * Disable input fields and buttons
+     */
     function disableInputs() {
         document.getElementById('player-guess').disabled = true;
         document.getElementById('submit-guess').disabled = true;
         document.getElementById('hint-button').disabled = true;
     }
 
+    /**
+     * Select a random target player from the filtered list
+     */
     function selectTargetPlayer() {
         if (filteredPlayers.length === 0) {
             showEndBanner('No players available. Change the mode.', false, null);
@@ -200,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         targetPlayer = filteredPlayers[idx];
     }
 
+    // Event listeners for buttons and input
     document.getElementById('submit-guess').addEventListener('click', submitGuess);
     document.getElementById('player-guess').addEventListener('keypress', e => {
         if (e.key === 'Enter') submitGuess();
@@ -207,6 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('hint-button').addEventListener('click', provideHint);
     document.getElementById('restart-game-button').addEventListener('click', restartGame);
 
+    /**
+     * Handle the guess submission
+     */
     function submitGuess() {
         if (!targetPlayer) {
             showEndBanner('No target player selected. Please change mode or restart.', false, null);
@@ -249,41 +306,58 @@ document.addEventListener('DOMContentLoaded', () => {
         guessInput.value = "";
     }
 
+    /**
+     * Calculate feedback for the guessed player compared to the target player
+     * @param {Object} guessed 
+     * @param {Object} target 
+     * @returns {Object}
+     */
     function calculateFeedback(guessed, target) {
         const fb = {
             pos: { correct: false, close: false },
-            number: { correct:false, close:false, higher:false },
-            height: { correct:false, close:false, higher:false },
-            age: { correct:false, close:false, higher:false },
-            team: { correct:false },
-            conference: { correct:false },
-            division: { correct:false }
+            number: { correct: false, close: false, higher: false },
+            height: { correct: false, close: false, higher: false },
+            age: { correct: false, close: false, higher: false },
+            team: { correct: false },
+            conference: { correct: false },
+            division: { correct: false }
         };
 
-        if (guessed.pos === target.pos) fb.pos.correct = true;
-        else if (positionCloseMapping[target.pos]?.includes(guessed.pos)) fb.pos.close = true;
+        // Position Feedback
+        if (guessed.pos === target.pos) {
+            fb.pos.correct = true;
+        } else if (positionCloseMapping[target.pos]?.includes(guessed.pos)) {
+            fb.pos.close = true;
+        }
 
-        const gN = parseInt(guessed.number,10), tN = parseInt(target.number,10);
-        if (gN === tN) fb.number.correct=true;
-        else if(!isNaN(gN)&&!isNaN(tN)){
-            if (Math.abs(gN-tN)===1) fb.number.close=true;
+        // Number Feedback
+        const gN = parseInt(guessed.number, 10), tN = parseInt(target.number, 10);
+        if (gN === tN) {
+            fb.number.correct = true;
+        } else if (!isNaN(gN) && !isNaN(tN)) {
+            if (Math.abs(gN - tN) === 1) fb.number.close = true;
             fb.number.higher = gN < tN;
         }
 
+        // Height Feedback
         const gH = guessed.height, tH = target.height;
-        if (gH === tH) fb.height.correct=true;
-        else if(!isNaN(gH)&&!isNaN(tH)){
-            if (Math.abs(gH-tH)<=1) fb.height.close=true;
+        if (gH === tH) {
+            fb.height.correct = true;
+        } else if (!isNaN(gH) && !isNaN(tH)) {
+            if (Math.abs(gH - tH) <= 1) fb.height.close = true;
             fb.height.higher = gH < tH;
         }
 
-        const gA = parseInt(guessed.age,10), tA = parseInt(target.age,10);
-        if (gA === tA) fb.age.correct = true;
-        else if(!isNaN(gA)&&!isNaN(tA)){
+        // Age Feedback
+        const gA = parseInt(guessed.age, 10), tA = parseInt(target.age, 10);
+        if (gA === tA) {
+            fb.age.correct = true;
+        } else if (!isNaN(gA) && !isNaN(tA)) {
             if (Math.abs(gA - tA) === 1) fb.age.close = true;
             fb.age.higher = gA < tA;
         }
 
+        // Team, Conference, Division Feedback
         fb.team.correct = guessed.team === target.team;
         fb.conference.correct = guessed.conference === target.conference;
         fb.division.correct = guessed.division === target.division;
@@ -291,24 +365,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return fb;
     }
 
+    /**
+     * Display the guess and feedback on the page
+     * @param {Object} feedback 
+     * @param {Object} guessedPlayer 
+     */
     function displayGuess(feedback, guessedPlayer) {
         const guessesContainer = document.getElementById('guesses');
         const guessIndex = 7 - attemptsLeft;
         const guessBlock = document.createElement('div');
         guessBlock.classList.add('guess-block');
 
+        // Guess Title
         const guessTitle = document.createElement('h2');
         guessTitle.textContent = `Guess ${guessIndex}`;
         guessBlock.appendChild(guessTitle);
 
+        // Player Info
         const playerInfo = document.createElement('div');
         playerInfo.classList.add('player-info');
 
         const img = document.createElement('img');
         img.classList.add('player-img');
-        img.src = guessedPlayer.image;
+
+        // Extract the filename from the image path
+        const imageFilename = guessedPlayer.image.split('/').pop();
+        // Encode URI components to handle spaces and special characters
+        const encodedImage = encodeURI(imageFilename);
+        img.src = encodedImage; // Reference image in root directory
         img.alt = "Player Photo";
-        img.onerror = function(){this.src='player_images/default.jpg';};
+        img.onerror = function() { this.src = 'default.jpg'; }; // Ensure default image exists in root
 
         const playerNameDiv = document.createElement('div');
         playerNameDiv.classList.add('player-name');
@@ -331,20 +417,29 @@ document.addEventListener('DOMContentLoaded', () => {
         playerInfo.appendChild(playerNameDiv);
         guessBlock.appendChild(playerInfo);
 
+        // Main Stats
         const mainStatsDiv = document.createElement('div');
         mainStatsDiv.classList.add('main-stats');
         mainStatsDiv.innerHTML = buildMainStatsLine(feedback, guessedPlayer, targetPlayer);
+        guessBlock.appendChild(mainStatsDiv);
 
+        // Team Stats
         const teamStatsDiv = document.createElement('div');
         teamStatsDiv.classList.add('team-stats');
         teamStatsDiv.innerHTML = buildTeamStatsLine(feedback, guessedPlayer, targetPlayer);
-
-        guessBlock.appendChild(mainStatsDiv);
         guessBlock.appendChild(teamStatsDiv);
 
+        // Append the guess block to the container
         guessesContainer.appendChild(guessBlock);
     }
 
+    /**
+     * Build the main stats line with feedback
+     * @param {Object} fb 
+     * @param {Object} g 
+     * @param {Object} t 
+     * @returns {string}
+     */
     function buildMainStatsLine(fb, g, t) {
         const ageEmoji = g.age >= 30 ? '👴' : '🧒'; 
         const posStr = formatAndWrapStat(`🏀 ${g.pos}`, fb.pos);
@@ -355,6 +450,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${posStr} ${heightStr} ${ageStr} ${noStr}`;
     }
 
+    /**
+     * Build the team stats line with feedback
+     * @param {Object} fb 
+     * @param {Object} g 
+     * @param {Object} t 
+     * @returns {string}
+     */
     function buildTeamStatsLine(fb, g, t) {
         const teamStr = `🏙️ Team: ${g.team}`;
         const confStr = `🌎 ${g.conference_abbr}`;
@@ -367,6 +469,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${teamStat} ${confStat} ${divStat}`;
     }
 
+    /**
+     * Format and wrap stats with feedback icons and styles
+     * @param {string} value 
+     * @param {Object} fbObj 
+     * @returns {string}
+     */
     function formatAndWrapStat(value, fbObj) {
         let formattedVal = '';
         if (fbObj.correct) {
@@ -388,6 +496,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return wrapStat(formattedVal);
     }
 
+    /**
+     * Wrap the stat in a styled span based on feedback
+     * @param {string} content 
+     * @returns {string}
+     */
     function wrapStat(content) {
         let className = 'stat-incorrect';
         if (content.includes('✅')) className = 'stat-correct';
@@ -396,10 +509,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<span class="stat-box ${className}">${content}</span>`;
     }
 
+    /**
+     * Check if the game is won
+     * @param {Object} gp 
+     * @returns {boolean}
+     */
     function isGameWon(gp) {
         return gp.player === targetPlayer?.player;
     }
 
+    /**
+     * Provide hints to the user based on hints used
+     */
     function provideHint() {
         if (!targetPlayer) {
             alert('No target player selected. Please restart.');
@@ -410,17 +531,21 @@ document.addEventListener('DOMContentLoaded', () => {
         hintArea.classList.remove('hidden');
 
         if (hintsUsed === 0) {
+            // Hint 1: Salary information
             const salary = targetPlayer.numeric_salary;
             hintArea.innerHTML = `<p><strong>🏀 Hint 1:</strong> The player's salary is approximately $${salary.toLocaleString()} per year.</p>`;
             hintsUsed++;
         } else if (hintsUsed === 1) {
+            // Hint 2: Blurred image
+            const blurredImageFilename = targetPlayer.image.split('/').pop();
+            const encodedBlurredImage = encodeURI(blurredImageFilename);
             hintArea.innerHTML += `
-                <img src="${targetPlayer.image}" alt="${targetPlayer.player} (Blurred)" class="blurred-image">
+                <img src="${encodedBlurredImage}" alt="${targetPlayer.player} (Blurred)" class="blurred-image">
                 <p class="hint-label">🏀 Hint 2: Here is a blurred image of the player.</p>
             `;
             hintsUsed++;
         } else if (hintsUsed === 2) {
-            // Third hint logic
+            // Hint 3: Top 10 category or country info or half image
             const categoryHint = determineTop10Category(targetPlayer);
             if (categoryHint) {
                 hintArea.innerHTML += `<p><strong>🏀 Hint 3:</strong> ${categoryHint}</p>`;
@@ -437,8 +562,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 } else {
                     // Reveal half the image
+                    const halfImageFilename = targetPlayer.image.split('/').pop();
+                    const encodedHalfImage = encodeURI(halfImageFilename);
                     hintArea.innerHTML += `
-                        <img src="${targetPlayer.image}" alt="${targetPlayer.player} (Half Image)" class="half-image">
+                        <img src="${encodedHalfImage}" alt="${targetPlayer.player} (Half Image)" class="half-image">
                         <p class="hint-label">🏀 Hint 3: Here is half of the player's image.</p>
                     `;
                 }
@@ -449,6 +576,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * Determine if the player is in any top 10 category
+     * @param {Object} player 
+     * @returns {string|null}
+     */
     function determineTop10Category(player) {
         // Check tallest
         const tallestIdx = sortedByHeightDesc.findIndex(p => p.player === player.player);
@@ -478,6 +610,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
+    /**
+     * Restart the game by resetting variables and UI elements
+     */
     function restartGame() {
         attemptsLeft = 6;
         hintsUsed = 0;
@@ -497,6 +632,12 @@ document.addEventListener('DOMContentLoaded', () => {
         startGame();
     }
 
+    /**
+     * Display the end game banner with message and player info
+     * @param {string} message 
+     * @param {boolean} won 
+     * @param {Object} player 
+     */
     function showEndBanner(message, won, player) {
         const banner = document.getElementById('game-end-banner');
         let playerInfoHTML = '';
@@ -511,9 +652,10 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         banner.classList.remove('hidden');
 
-        // Scroll into view
-        banner.scrollIntoView({behavior:'smooth'});
+        // Scroll into view smoothly
+        banner.scrollIntoView({ behavior: 'smooth' });
 
+        // Add event listener to "Play Again" button
         const playAgainBtn = document.getElementById('play-again-button');
         playAgainBtn.addEventListener('click', () => {
             banner.innerHTML = '';
@@ -522,6 +664,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /**
+     * Build the end game player info section
+     * @param {Object} player 
+     * @returns {string}
+     */
     function buildEndGamePlayerInfo(player) {
         const ageEmoji = player.age >= 30 ? '👴' : '🧒'; 
         const posStat = neutralStat(`🏀 ${player.pos}`);
@@ -537,10 +684,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const confStat = neutralStat(confStr);
         const divStat = neutralStat(divStr);
 
+        // Extract filename for player image
+        const imageFilename = player.image.split('/').pop();
+        const encodedImage = encodeURI(imageFilename);
+
         return `
         <div class="end-player-info">
             <div class="player-info">
-                <img class="player-img" src="${player.image}" alt="Player Photo" onerror="this.src='player_images/default.jpg';">
+                <img class="player-img" src="${encodedImage}" alt="Player Photo" onerror="this.src='default.jpg';">
                 <div class="player-name">
                     ${player.player}
                     <img src="${getFlagURL(player.birth_country_code)}" alt="${getCountryName(player.birth_country_code)} Flag" width="20" height="15">
@@ -555,21 +706,37 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
     }
 
+    /**
+     * Wrap neutral stats without feedback icons
+     * @param {string} value 
+     * @returns {string}
+     */
     function neutralStat(value) {
         return `<span class="stat-box">${value}</span>`;
     }
 
+    /**
+     * Save game statistics to localStorage
+     */
     function saveStats() {
         localStorage.setItem('gamesPlayed', gamesPlayed.toString());
         localStorage.setItem('gamesWon', gamesWon.toString());
         updateScoreboard();
     }
 
+    /**
+     * Update the scoreboard display
+     */
     function updateScoreboard() {
         document.getElementById('games-played').textContent = gamesPlayed;
         document.getElementById('games-won').textContent = gamesWon;
     }
 
+    /**
+     * Parse the salary string to a numeric value
+     * @param {string} salaryStr 
+     * @returns {number}
+     */
     function parseSalary(salaryStr) {
         const cleaned = salaryStr.replace(/[^0-9]/g, '');
         const sal = parseFloat(cleaned);
@@ -580,6 +747,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return sal;
     }
 
+    /**
+     * Format height from inches to "ft-in" format
+     * @param {number} inches 
+     * @returns {string}
+     */
     function formatHeight(inches) {
         if (typeof inches !== 'number' || isNaN(inches)) return 'N/A';
         const ft = Math.floor(inches / 12);
