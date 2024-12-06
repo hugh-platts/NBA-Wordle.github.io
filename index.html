@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>NBA Player Finder Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-basketball-ball"></i> NBA Player Finder <i class="fa-solid fa-basketball-ball"></i></h1>
+            <p>Guess the NBA player by their statistics!</p>
+            <p class="instructions">
+                Select a mode and try to guess the NBA player within 6 attempts.<br>
+                Your guesses reveal how close you are on attributes like position, height, age, team, etc.<br>
+                Use hints if you're stuck. Good luck!
+            </p>
+            <button id="restart-game-button" class="hidden" aria-label="Restart Game"><i class="fa-solid fa-rotate"></i> Restart</button>
+        </header>
+
+        <!-- End Game Banner (hidden initially) -->
+        <div id="game-end-banner" class="hidden"></div>
+
+        <div id="mode-selection">
+            <label for="game-mode">Mode:</label>
+            <select id="game-mode" aria-label="Select Game Mode">
+                <option value="all" selected>All</option>
+                <option value="easy">Easy ($25M+)</option>
+                <option value="medium">Medium ($7M - $25M)</option>
+                <option value="hard">Hard ($1M - $7M)</option>
+            </select>
+        </div>
+
+        <div id="game-area">
+            <div id="hint-area" class="hidden"></div>
+            <input type="text" id="player-guess" list="player-names" placeholder="Enter player name" aria-label="Player Name Input" disabled>
+            <datalist id="player-names"></datalist>
+            <div class="buttons">
+                <button id="submit-guess" aria-label="Submit Guess" disabled><i class="fa-solid fa-magnifying-glass"></i> Guess</button>
+                <button id="hint-button" aria-label="Get a Hint" disabled><i class="fa-solid fa-lightbulb"></i> Hint</button>
+            </div>
+            <p>Attempts Left: <span id="attempts-left">6</span></p>
+        </div>
+
+        <div class="guesses" id="guesses" aria-label="Today's User Guesses"></div>
+        
+        <!-- Scoreboard -->
+        <div id="scoreboard">
+            <span class="score-item">🎮 Games Played: <span id="games-played">0</span></span> | 
+            <span class="score-item">🏆 Games Won: <span id="games-won">0</span></span>
+        </div>
+    </div>
+
+    <footer>
+        <p>Powered by <a href="https://www.nba.com/" target="_blank">NBA</a></p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
